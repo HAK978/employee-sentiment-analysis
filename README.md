@@ -102,6 +102,7 @@ All visualizations are stored in the `visualizations/` folder:
 - `viz_7_day_of_week_analysis.png` - Sentiment patterns by day of week
 - `viz_8_seasonal_patterns.png` - Monthly, quarterly, and period-of-month trends
 - `viz_9_weekend_work_analysis.png` - Weekend work correlation with sentiment (burnout indicator)
+- `viz_10_daily_sentiment_distribution.png` - Positive vs negative email distribution across week
 
 **Predictive Modeling:**
 - `task6_actual_vs_predicted.png` - Model performance (actual vs predicted with residuals)
