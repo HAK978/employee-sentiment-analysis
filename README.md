@@ -99,6 +99,8 @@ All visualizations are stored in the `visualizations/` folder:
 - `viz_4_cumulative_trajectories.png` - Cumulative sentiment paths by employee
 - `viz_5_sentiment_heatmap.png` - Employee × month sentiment heatmap
 - `viz_6_employee_scores.png` - Overall employee sentiment scores
+- `viz_7_day_of_week_analysis.png` - Sentiment patterns by day of week
+- `viz_8_seasonal_patterns.png` - Monthly, quarterly, and period-of-month trends
 
 **Predictive Modeling:**
 - `task6_actual_vs_predicted.png` - Model performance (actual vs predicted with residuals)
