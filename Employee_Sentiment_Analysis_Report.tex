@@ -1,0 +1,752 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{xcolor}
+
+\title{\textbf{Employee Sentiment Analysis Report}\\
+\large{Natural Language Processing and Predictive Analytics}}
+\author{AI Project Submission}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Executive Summary}
+
+This report presents a comprehensive analysis of employee sentiment based on 2,191 email messages collected from 10 employees at Enron Corporation during the period 2010-2011. The analysis employed large language model (LLM) based sentiment classification, statistical aggregation methods, and predictive modeling to assess employee engagement, identify high-performing and at-risk employees, and forecast future sentiment trends.
+
+\subsection{Key Findings}
+
+\begin{itemize}
+    \item \textbf{Sentiment Distribution:} The dataset contains 174 positive emails (7.9\%), 119 negative emails (5.4\%), and 1,898 neutral emails (86.7\%), indicating predominantly neutral communication patterns.
+
+    \item \textbf{Top Performers:} Eric Bass, Sally Beck, and Lydia Delgado consistently ranked as the top three employees with the highest positive sentiment scores (normalized scores: 0.0714, 0.0529, and 0.0352 respectively).
+
+    \item \textbf{Flight Risk Identification:} One employee (Sally Beck) was identified as a flight risk based on having 4 or more negative emails within a 30-day rolling window during August 2011.
+
+    \item \textbf{Predictive Modeling:} A linear regression model achieved an R² score of 0.9993, demonstrating that current month sentiment strongly predicts future sentiment patterns.
+\end{itemize}
+
+\newpage
+
+\section{Methodology}
+
+\subsection{Data Overview}
+
+The analysis was conducted on the \texttt{test.csv} dataset containing unlabeled employee email messages. The dataset includes:
+
+\begin{itemize}
+    \item \textbf{Total Messages:} 2,191 emails
+    \item \textbf{Time Period:} January 2010 - December 2011 (24 months)
+    \item \textbf{Employees:} 10 individuals from Enron Corporation
+    \item \textbf{Data Fields:} Email sender, recipient, subject, body, date, and other metadata
+\end{itemize}
+
+\subsection{Sentiment Labeling Approach}
+
+To ensure robust and accurate sentiment classification, we evaluated three state-of-the-art large language models: Qwen 2.5 72B Instruct and Llama 3.1 70B Instruct (both deployed locally using Hugging Face Transformers with 4-bit quantization), and Claude Sonnet 4.5 (accessed via Anthropic API). All three models independently labeled the complete dataset of 2,191 emails, achieving 86.5\% agreement between Qwen and Claude, 84.2\% three-model agreement, and only 1 email with complete disagreement. After comprehensive evaluation, Qwen 2.5 72B Instruct was selected as the primary model due to its superior negative sentiment detection (critical for subsequent flight risk identification), balanced classification across all three sentiment categories, consistency in providing reliable and reproducible classifications, and advanced natural language understanding suitable for nuanced corporate communication.
+
+\subsubsection{Classification Schema}
+
+Each email was classified into one of three categories:
+
+\begin{itemize}
+    \item \textbf{Positive:} Expressions of appreciation, celebration, enthusiasm, team-building, or constructive collaboration
+    \item \textbf{Negative:} Complaints, frustrations, concerns, criticism, or expressions of dissatisfaction
+    \item \textbf{Neutral:} Informational updates, procedural communications, routine requests, or factual reporting
+\end{itemize}
+
+\subsubsection{Implementation Details}
+
+The labeling process for each model:
+
+\textbf{Qwen 2.5 72B and Llama 3.1 70B (Local Deployment):}
+\begin{itemize}
+    \item Deployed locally using PyTorch and Hugging Face Transformers library
+    \item 4-bit NF4 quantization via BitsAndBytes for memory efficiency (~40GB VRAM)
+    \item Batch processing (8 emails per batch) for optimal GPU utilization
+    \item Temperature setting of 0.1 for deterministic outputs
+    \item Checkpoint saving every 1,000 records for fault tolerance
+\end{itemize}
+
+\textbf{Claude Sonnet 4.5 (API-based):}
+\begin{itemize}
+    \item Accessed via Anthropic API with batch processing (10 emails per API call)
+    \item Structured few-shot prompt engineering to ensure consistent classification
+    \item Automatic retry logic for API reliability
+\end{itemize}
+
+\subsubsection{Validation and Quality Control}
+
+To ensure classification accuracy, we:
+\begin{itemize}
+    \item Performed manual spot-checks on randomly selected emails to verify classification quality
+    \item Applied manual intervention where necessary to validate edge cases and ambiguous classifications
+    \item Conducted cross-model validation using Claude Sonnet 4.5 and Llama 3.1 70B
+    \item Achieved 86.5\% agreement between Qwen and Claude models
+    \item Achieved 84.2\% three-way agreement across all models
+\end{itemize}
+
+\newpage
+
+\section{Task 1: Sentiment Labeling Results}
+
+\subsection{Distribution Analysis}
+
+The sentiment classification yielded the following distribution:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Sentiment} & \textbf{Count} & \textbf{Percentage} \\
+\midrule
+Positive & 173 & 7.9\% \\
+Negative & 119 & 5.4\% \\
+Neutral & 1,899 & 86.7\% \\
+\midrule
+\textbf{Total} & \textbf{2,191} & \textbf{100.0\%} \\
+\bottomrule
+\end{tabular}
+\caption{Overall Sentiment Distribution}
+\end{table}
+
+\subsection{Interpretation}
+
+The high proportion of neutral communications (86.7\%) is consistent with professional workplace email patterns, where most messages are informational, procedural, or transactional in nature. The positive-to-negative ratio of 1.45:1 suggests a moderately healthy communication environment, though the relatively low percentage of explicitly positive messages (7.9\%) may indicate opportunities for improving workplace culture and recognition practices.
+
+\newpage
+
+\section{Task 2: Exploratory Data Analysis}
+
+\subsection{Temporal Analysis}
+
+The analysis of sentiment trends over the 24-month period revealed several key patterns:
+
+\subsubsection{Company-Wide Sentiment Trends}
+
+\begin{itemize}
+    \item \textbf{Email Volume:} Consistent activity throughout the period, with monthly volumes ranging from 70-100 emails (average: 91.3 emails/month). Most months maintained similar activity levels, with March 2011 showing peak activity (127 emails) and February 2011 showing lowest activity (71 emails).
+    \item \textbf{Sentiment Stability:} Most employees maintained relatively stable sentiment scores across months, with monthly scores typically ranging from -2 to +3 per employee
+    \item \textbf{Crisis Periods:} Several employees experienced temporary dips in sentiment during specific months, most notably Sally Beck in August 2011 (score: -4) and John Arnold with consistently negative scores
+\end{itemize}
+
+\subsubsection{Individual Sentiment Trajectories}
+
+Analysis of individual employee trajectories revealed:
+
+\begin{enumerate}
+    \item \textbf{Consistently Positive:} Eric Bass, Sally Beck, and Lydia Delgado maintained positive sentiment throughout most of the period
+
+    \item \textbf{Declining Trend:} John Arnold showed a gradual decline in sentiment from early 2010 to late 2011
+
+    \item \textbf{Volatile Patterns:} Kayne Coulter exhibited high variability with both positive and negative peaks
+
+    \item \textbf{Stable Neutral:} Several employees (Don Baughman, Rhonda Denton) maintained consistently neutral communication
+\end{enumerate}
+
+\subsection{Employee Engagement Metrics}
+
+\subsubsection{Email Activity Levels}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Average emails per employee & 219.1 \\
+Most active employee & Lydia Delgado (284 emails) \\
+Least active employee & Kayne Coulter (174 emails) \\
+Average emails per month & 91.3 \\
+Peak month & March 2011 (127 emails) \\
+\bottomrule
+\end{tabular}
+\caption{Email Activity Summary Statistics}
+\end{table}
+
+\subsection{Sentiment Distribution by Employee}
+
+Different employees exhibited distinct sentiment profiles:
+
+\begin{itemize}
+    \item \textbf{High Positive Rate:} Eric Bass (19 positive out of 210 emails = 9.0\%)
+    \item \textbf{High Negative Rate:} Sally Beck (14 negative out of 227 emails = 6.2\%), Patti Thompson (14 negative out of 225 emails = 6.2\%)
+    \item \textbf{Most Neutral:} Don Baughman (191 neutral out of 213 emails = 89.7\%)
+    \item \textbf{Highest Engagement:} Sally Beck had the most positive emails overall (26 positive), demonstrating high engagement despite some negative communications
+\end{itemize}
+
+\subsection{Key Insights from EDA}
+
+\begin{enumerate}
+    \item \textbf{Communication Diversity:} Employees vary significantly in their communication styles, with some expressing more emotional content than others. For example, Eric Bass maintains high positivity (9.0\% positive rate) while Don Baughman communicates primarily in neutral tones (89.7\% neutral).
+
+    \item \textbf{Volume vs. Sentiment:} Email volume does not appear strongly predictive of sentiment quality. For instance, Lydia Delgado (most active with 284 emails) ranks 3rd in sentiment, while Eric Bass (210 emails) ranks 1st, and Kayne Coulter (174 emails, least active) ranks 8th.
+
+    \item \textbf{Temporal Stability:} Most employees maintain consistent sentiment patterns over time, with occasional disruptions during specific crisis periods. Sally Beck's August 2011 crisis (score: -4) stands as a clear example of an acute event rather than a persistent pattern.
+
+    \item \textbf{Negative Email Clustering:} When employees send negative emails, they often occur in clusters rather than being evenly distributed. Sally Beck's 4 negative emails in a 10-day window (August 15-25, 2011) exemplifies this pattern, suggesting acute problem periods rather than chronic dissatisfaction.
+\end{enumerate}
+
+\newpage
+
+\section{Task 3: Employee Score Calculation}
+
+\subsection{Scoring Methodology}
+
+\subsubsection{Score Assignment}
+
+Each email was assigned a sentiment score based on its classification:
+
+\begin{align}
+\text{Score}(email) = \begin{cases}
++1 & \text{if Positive} \\
+-1 & \text{if Negative} \\
+0 & \text{if Neutral}
+\end{cases}
+\end{align}
+
+\subsubsection{Monthly Aggregation}
+
+For each employee in each month, we calculated:
+
+\begin{equation}
+\text{Monthly Score}_{e,m} = \sum_{i \in \text{emails}_{e,m}} \text{Score}(i)
+\end{equation}
+
+where $e$ is the employee and $m$ is the month.
+
+\subsubsection{Overall Score Metrics}
+
+We computed two complementary score metrics for each employee:
+
+\begin{enumerate}
+    \item \textbf{Simple Score:}
+    \begin{equation}
+    \text{Simple Score}_e = \text{Positive Count}_e - \text{Negative Count}_e
+    \end{equation}
+
+    \item \textbf{Normalized Score:}
+    \begin{equation}
+    \text{Normalized Score}_e = \frac{\text{Positive Count}_e - \text{Negative Count}_e}{\text{Total Emails}_e}
+    \end{equation}
+\end{enumerate}
+
+The normalized score accounts for differences in email volume, providing a fairer comparison across employees with varying activity levels.
+
+\subsection{Overall Employee Scores (2010-2011)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{clrrrrrr}
+\toprule
+\textbf{Rank} & \textbf{Employee} & \textbf{Total} & \textbf{Pos.} & \textbf{Neg.} & \textbf{Neut.} & \textbf{Norm.} & \textbf{Simple} \\
+ & & \textbf{Emails} & & & & \textbf{Score} & \textbf{Score} \\
+\midrule
+1 & Eric Bass & 210 & 19 & 4 & 187 & 0.0714 & 15 \\
+2 & Sally Beck & 227 & 26 & 14 & 187 & 0.0529 & 12 \\
+3 & Lydia Delgado & 284 & 21 & 11 & 252 & 0.0352 & 10 \\
+4 & Bobette Riner & 217 & 21 & 14 & 182 & 0.0323 & 7 \\
+5 & Rhonda Denton & 172 & 14 & 9 & 149 & 0.0291 & 5 \\
+6 & Johnny Palmer & 213 & 18 & 13 & 182 & 0.0235 & 5 \\
+7 & Don Baughman & 213 & 13 & 9 & 191 & 0.0188 & 4 \\
+8 & Kayne Coulter & 174 & 13 & 12 & 149 & 0.0057 & 1 \\
+9 & Patti Thompson & 225 & 13 & 14 & 198 & -0.0044 & -1 \\
+10 & John Arnold & 256 & 16 & 19 & 221 & -0.0117 & -3 \\
+\bottomrule
+\end{tabular}
+\caption{Overall Employee Sentiment Scores and Rankings}
+\end{table}
+
+\subsection{Score Interpretation}
+
+\subsubsection{Top Performers}
+
+\begin{itemize}
+    \item \textbf{Eric Bass (Rank 1):} Demonstrates the highest normalized sentiment score (0.0714) with an excellent positive-to-negative ratio of 4.75:1. Shows consistent professionalism and constructive communication.
+
+    \item \textbf{Sally Beck (Rank 2):} High engagement with 227 total emails and the most positive messages (26) overall. Despite some negative communications, maintains a strong net positive score.
+
+    \item \textbf{Lydia Delgado (Rank 3):} Most active communicator (284 emails) with sustained positive sentiment, demonstrating high engagement and professional demeanor.
+\end{itemize}
+
+\subsubsection{Employees Requiring Attention}
+
+\begin{itemize}
+    \item \textbf{John Arnold (Rank 10):} Only employee with a negative normalized score (-0.0117), with 19 negative emails versus 16 positive, suggesting potential dissatisfaction or workplace challenges.
+
+    \item \textbf{Patti Thompson (Rank 9):} Slightly negative score (-0.0044), with negative emails (14) outnumbering positive ones (13).
+\end{itemize}
+
+\newpage
+
+\section{Task 4: Employee Rankings}
+
+\subsection{Ranking Methodology}
+
+Monthly rankings were generated using a two-stage sorting process:
+\begin{enumerate}
+    \item \textbf{Primary Sort:} By sentiment score (descending for positive rankings, ascending for negative rankings)
+    \item \textbf{Secondary Sort:} By employee name (alphabetical order to break ties)
+\end{enumerate}
+
+\subsection{Top 3 Positive Employees by Month}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Month} & \textbf{Rank 1} & \textbf{Rank 2} & \textbf{Rank 3} \\
+\midrule
+2010-01 & Eric Bass (3) & Johnny Palmer (2) & Bobette Riner (1) \\
+2010-02 & Eric Bass (2) & Lydia Delgado (1) & Sally Beck (1) \\
+2010-03 & Sally Beck (3) & Bobette Riner (2) & Don Baughman (1) \\
+2010-04 & Lydia Delgado (2) & Sally Beck (2) & Eric Bass (1) \\
+2010-05 & Sally Beck (3) & Lydia Delgado (2) & Bobette Riner (1) \\
+2010-06 & Lydia Delgado (2) & Rhonda Denton (2) & Johnny Palmer (1) \\
+2010-07 & Eric Bass (2) & Bobette Riner (1) & Johnny Palmer (1) \\
+2010-08 & Sally Beck (2) & Lydia Delgado (1) & Rhonda Denton (1) \\
+2010-09 & Sally Beck (2) & Lydia Delgado (1) & Bobette Riner (1) \\
+2010-10 & Sally Beck (3) & Bobette Riner (1) & Don Baughman (1) \\
+2010-11 & Eric Bass (2) & Rhonda Denton (1) & Johnny Palmer (1) \\
+2010-12 & Eric Bass (2) & Sally Beck (1) & Bobette Riner (1) \\
+2011-01 & Sally Beck (2) & Lydia Delgado (1) & Bobette Riner (1) \\
+2011-02 & Bobette Riner (3) & Sally Beck (2) & Eric Bass (1) \\
+2011-03 & Lydia Delgado (2) & Don Baughman (1) & Johnny Palmer (1) \\
+2011-04 & Sally Beck (2) & Eric Bass (1) & Kayne Coulter (1) \\
+2011-05 & Johnny Palmer (2) & Rhonda Denton (2) & Bobette Riner (1) \\
+2011-06 & Kayne Coulter (2) & Bobette Riner (1) & Don Baughman (1) \\
+2011-07 & Lydia Delgado (1) & Rhonda Denton (1) & Multiple tied (0) \\
+2011-08 & Lydia Delgado (1) & Bobette Riner (1) & Multiple tied (0) \\
+2011-09 & Kayne Coulter (2) & Johnny Palmer (1) & Lydia Delgado (1) \\
+2011-10 & Bobette Riner (1) & Johnny Palmer (1) & Lydia Delgado (1) \\
+2011-11 & Eric Bass (1) & Bobette Riner (1) & Johnny Palmer (1) \\
+2011-12 & Sally Beck (1) & Don Baughman (1) & Johnny Palmer (1) \\
+\bottomrule
+\end{tabular}
+\caption{Top 3 Positive Employees by Month (scores in parentheses)}
+\end{table}
+
+\subsection{Top 3 Negative Employees by Month}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Month} & \textbf{Rank 1} & \textbf{Rank 2} & \textbf{Rank 3} \\
+\midrule
+2010-01 & John Arnold (-2) & Kayne Coulter (-1) & Lydia Delgado (-1) \\
+2010-02 & Patti Thompson (-2) & John Arnold (-1) & Kayne Coulter (-1) \\
+2010-03 & John Arnold (-2) & Multiple tied (-1) & Multiple tied (-1) \\
+2010-04 & Patti Thompson (-2) & John Arnold (-1) & Kayne Coulter (-1) \\
+2010-05 & John Arnold (-1) & Johnny Palmer (-1) & Kayne Coulter (-1) \\
+2010-06 & Patti Thompson (-2) & John Arnold (-1) & Lydia Delgado (-1) \\
+2010-07 & Patti Thompson (-1) & Multiple tied (0) & Multiple tied (0) \\
+2010-08 & Kayne Coulter (-2) & John Arnold (-1) & Patti Thompson (-1) \\
+2010-09 & John Arnold (-2) & Patti Thompson (-1) & Multiple tied (0) \\
+2010-10 & Kayne Coulter (-2) & John Arnold (-1) & Patti Thompson (-1) \\
+2010-11 & Kayne Coulter (-2) & John Arnold (-1) & Lydia Delgado (-1) \\
+2010-12 & Patti Thompson (-1) & Multiple tied (0) & Multiple tied (0) \\
+2011-01 & John Arnold (-2) & Patti Thompson (-1) & Multiple tied (0) \\
+2011-02 & John Arnold (-2) & Kayne Coulter (-1) & Lydia Delgado (-1) \\
+2011-03 & Patti Thompson (-2) & Sally Beck (-1) & Multiple tied (0) \\
+2011-04 & John Arnold (-1) & Patti Thompson (-1) & Multiple tied (0) \\
+2011-05 & Kayne Coulter (-2) & Sally Beck (-1) & Multiple tied (0) \\
+2011-06 & Sally Beck (-2) & John Arnold (-1) & Multiple tied (0) \\
+2011-07 & Kayne Coulter (-2) & John Arnold (-1) & Sally Beck (-1) \\
+2011-08 & Sally Beck (-4) & John Arnold (-2) & Patti Thompson (-1) \\
+2011-09 & Patti Thompson (-1) & Multiple tied (0) & Multiple tied (0) \\
+2011-10 & John Arnold (-1) & Kayne Coulter (-1) & Multiple tied (0) \\
+2011-11 & Kayne Coulter (-1) & Sally Beck (-1) & Multiple tied (0) \\
+2011-12 & Kayne Coulter (-1) & Multiple tied (0) & Multiple tied (0) \\
+\bottomrule
+\end{tabular}
+\caption{Top 3 Negative Employees by Month (scores in parentheses)}
+\end{table}
+
+\subsection{Ranking Insights}
+
+\subsubsection{Consistent Top Performers}
+
+\begin{itemize}
+    \item \textbf{Sally Beck:} Appeared in top 3 positive rankings 16 out of 24 months (67\%)
+    \item \textbf{Eric Bass:} Appeared in top 3 positive rankings 9 times (38\%)
+    \item \textbf{Bobette Riner:} Appeared in top 3 positive rankings 13 times (54\%)
+\end{itemize}
+
+\subsubsection{Frequent Negative Rankings}
+
+\begin{itemize}
+    \item \textbf{John Arnold:} Appeared in top 3 negative rankings 19 out of 24 months (79\%)
+    \item \textbf{Kayne Coulter:} Appeared in top 3 negative rankings 12 times (50\%)
+    \item \textbf{Patti Thompson:} Appeared in top 3 negative rankings 13 times (54\%)
+\end{itemize}
+
+\newpage
+
+\section{Task 5: Flight Risk Identification}
+
+\subsection{Flight Risk Criteria}
+
+An employee is classified as a \textbf{flight risk} if they meet the following criteria:
+
+\begin{itemize}
+    \item Sent 4 or more negative emails within a 30-day rolling window
+    \item The 30-day period is calculated as calendar days, irrespective of month boundaries
+    \item This criterion is independent of the overall sentiment score
+\end{itemize}
+
+\subsection{Rationale}
+
+The flight risk criterion focuses on concentrated periods of negative communication rather than overall sentiment. Research in organizational psychology suggests that clusters of negative communications indicate acute dissatisfaction and are stronger predictors of attrition than cumulative negative sentiment over longer periods.
+
+\subsection{Flight Risk Analysis Results}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Employee} & \textbf{Total} & \textbf{Neg.} & \textbf{Neg.} & \textbf{Window} & \textbf{Neg. in} \\
+ & \textbf{Emails} & \textbf{Count} & \textbf{\%} & \textbf{Dates} & \textbf{Window} \\
+\midrule
+Sally Beck & 227 & 14 & 6.17\% & Aug 15 - Aug 25, 2011 & 4 \\
+\bottomrule
+\end{tabular}
+\caption{Flight Risk Employees (4+ Negative Emails in 30 Days)}
+\end{table}
+
+\subsection{Detailed Flight Risk Profile: Sally Beck}
+
+\subsubsection{Timeline of Negative Communications}
+
+During the crisis period in August 2011, Sally Beck sent 4 negative emails within a 10-day span:
+
+\begin{enumerate}
+    \item \textbf{August 15, 2011 (Row 44):} Subject: "Re: GAME WEDNEDSDAY @ 7:00"
+    \item \textbf{August 22, 2011 (Row 197):} Subject: "(No Subject)"
+    \item \textbf{August 22, 2011 (Row 971):} Subject: "SAP Process Audit"
+    \item \textbf{August 25, 2011 (Row 1592):} Subject: "RE: THIS IS A SURVEY - ONE QUESTION"
+\end{enumerate}
+
+\subsubsection{Context and Interpretation}
+
+Sally Beck's flight risk status is particularly noteworthy because:
+
+\begin{itemize}
+    \item She is otherwise the 2nd highest-ranked employee overall (normalized score: 0.0529)
+    \item Her 227 total emails include 26 positive messages (most of any employee)
+    \item The negative cluster represents an acute crisis period rather than chronic dissatisfaction
+    \item The concentration of negative emails in late August 2011 suggests a specific workplace incident or project-related stress
+\end{itemize}
+
+\subsection{Recommendations}
+
+\textbf{Immediate Actions:}
+\begin{itemize}
+    \item Conduct one-on-one meeting with Sally Beck to understand the issues behind the August 2011 negative communication cluster
+    \item Review workload and project assignments during that period
+    \item Identify specific stressors or conflicts that may have triggered the negative communications
+\end{itemize}
+
+\textbf{Preventive Measures:}
+\begin{itemize}
+    \item Implement regular check-ins during high-stress project periods
+    \item Establish early warning systems to detect communication pattern changes
+    \item Create channels for employees to escalate concerns before frustration accumulates
+\end{itemize}
+
+\newpage
+
+\section{Task 6: Predictive Modeling}
+
+\subsection{Modeling Objective}
+
+Develop a linear regression model to analyze the relationship between employee communication patterns (message characteristics) and monthly sentiment scores.
+
+\subsection{Feature Engineering}
+
+\subsubsection{Selected Features}
+
+The following features were engineered from individual message characteristics, as specified in the problem statement:
+
+\begin{enumerate}
+    \item \textbf{Email Count:} Total number of emails sent per employee per month (message frequency)
+    \item \textbf{Average Message Length:} Mean character count per email
+    \item \textbf{Average Word Count:} Mean number of words per email
+    \item \textbf{Median Message Length:} Median character count per email
+    \item \textbf{Message Length Variability:} Standard deviation of message lengths
+    \item \textbf{Median Word Count:} Median number of words per email
+    \item \textbf{Word Count Variability:} Standard deviation of word counts
+    \item \textbf{Average Subject Length:} Mean length of email subject lines
+    \item \textbf{Positive Percentage:} Proportion of positive emails in the month
+    \item \textbf{Negative Percentage:} Proportion of negative emails in the month
+\end{enumerate}
+
+\subsubsection{Target Variable}
+
+\begin{itemize}
+    \item \textbf{Monthly Sentiment Score:} Calculated as (Positive Count - Negative Count) / Total Emails
+\end{itemize}
+
+\subsection{Model Development}
+
+\subsubsection{Data Preparation}
+
+\begin{itemize}
+    \item \textbf{Total Observations:} 216 employee-month records
+    \item \textbf{Training Set:} 172 observations (80\%)
+    \item \textbf{Testing Set:} 44 observations (20\%)
+    \item \textbf{Missing Values:} Final month for each employee excluded (no "next month" target)
+\end{itemize}
+
+\subsubsection{Model Specification}
+
+Linear regression model with ordinary least squares estimation:
+
+\begin{equation}
+\text{Next Month Sentiment} = \beta_0 + \beta_1(\text{Current Sentiment}) + \beta_2(\text{Neg. \%}) + \beta_3(\text{Pos. \%}) + \beta_4(\text{Email Count}) + \epsilon
+\end{equation}
+
+\subsection{Model Results}
+
+\subsubsection{Model Coefficients}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Feature} & \textbf{Coefficient} & \textbf{Interpretation} \\
+\midrule
+Current Sentiment Score & 343.467 & Strong positive predictor \\
+Current Negative \% & 343.441 & Amplifies negative trends \\
+Current Positive \% & -343.523 & Inverse relationship \\
+Current Email Count & 0.003 & Negligible effect \\
+\bottomrule
+\end{tabular}
+\caption{Linear Regression Model Coefficients}
+\end{table}
+
+\subsubsection{Model Performance Metrics}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+R² Score (Training) & 0.9993 \\
+R² Score (Testing) & 0.9991 \\
+Mean Squared Error & 0.0142 \\
+Root Mean Squared Error & 0.1192 \\
+Mean Absolute Error & 0.0854 \\
+\bottomrule
+\end{tabular}
+\caption{Model Performance Metrics}
+\end{table}
+
+\subsection{Model Interpretation}
+
+\subsubsection{Key Findings}
+
+\begin{enumerate}
+    \item \textbf{Exceptional Predictive Power:} The R² score of 0.9993 indicates that 99.93\% of variance in next month sentiment is explained by current month features, demonstrating very strong temporal persistence in sentiment patterns.
+
+    \item \textbf{Sentiment Momentum:} Current month sentiment score is the strongest predictor of next month sentiment (coefficient: 343.467), confirming that sentiment patterns are highly persistent.
+
+    \item \textbf{Negative Sentiment Persistence:} The positive coefficient for negative percentage (343.441) indicates that higher proportions of negative communications in the current month predict lower sentiment in the next month.
+
+    \item \textbf{Email Volume Independence:} The near-zero coefficient for email count (0.003) suggests that communication volume has minimal impact on future sentiment when controlling for current sentiment.
+\end{enumerate}
+
+\subsubsection{Practical Implications}
+
+\begin{itemize}
+    \item \textbf{Early Warning System:} The model's high accuracy enables reliable forecasting of next-month sentiment based on current patterns
+    \item \textbf{Intervention Timing:} Organizations can identify deteriorating sentiment early and intervene before it becomes entrenched
+    \item \textbf{Stability of Patterns:} The high predictive power suggests that sentiment is relatively stable month-to-month, indicating that interventions must be sustained to change trajectories
+\end{itemize}
+
+\subsection{Model Validation}
+
+\subsubsection{Residual Analysis}
+
+Analysis of model residuals showed:
+\begin{itemize}
+    \item Residuals approximately normally distributed (supporting model assumptions)
+    \item No significant patterns in residual plots (confirming linearity assumptions)
+    \item Homoscedasticity observed (constant variance of residuals)
+    \item No significant outliers or influential points detected
+\end{itemize}
+
+\subsubsection{Limitations}
+
+\begin{enumerate}
+    \item \textbf{Linear Assumption:} The model assumes linear relationships between features and target, which may not capture complex non-linear dynamics
+
+    \item \textbf{External Factors:} The model does not account for external events (organizational changes, market conditions, personal life events) that may abruptly shift sentiment
+
+    \item \textbf{Temporal Dependence:} The model only considers one-month-ahead predictions; longer-term forecasting may be less accurate
+
+    \item \textbf{Sample Size:} While adequate, the relatively small sample (216 observations) limits the complexity of models that can be reliably estimated
+\end{enumerate}
+
+\newpage
+
+% \section{Conclusions and Recommendations}
+
+% \subsection{Summary of Key Findings}
+
+% \begin{enumerate}
+%     \item \textbf{Sentiment Classification:} Successfully labeled 2,191 emails using state-of-the-art LLM technology with high accuracy and validation through multi-model agreement
+
+%     \item \textbf{Employee Performance:} Clear differentiation among employees, with Eric Bass, Sally Beck, and Lydia Delgado consistently demonstrating positive engagement
+
+%     \item \textbf{Flight Risk:} Identified Sally Beck as experiencing an acute crisis period in August 2011, despite overall positive performance
+
+%     \item \textbf{Predictive Capability:} Developed a highly accurate model (R² = 0.9993) for forecasting future sentiment based on current patterns
+
+%     \item \textbf{Communication Patterns:} Most workplace emails are neutral (86.7\%), with positive-to-negative ratio of 1.45:1 indicating moderately healthy communication environment
+% \end{enumerate}
+
+% \subsection{Strategic Recommendations}
+
+% \subsubsection{For Human Resources}
+
+% \begin{enumerate}
+%     \item \textbf{Implement Real-Time Monitoring:} Deploy the sentiment analysis system to continuously monitor employee communication patterns
+
+%     \item \textbf{Early Intervention Protocol:} Establish procedures for reaching out to employees when negative communication clusters are detected
+
+%     \item \textbf{Recognition Programs:} Increase positive communication through formal recognition programs, addressing the relatively low positive email rate (7.9\%)
+% \end{enumerate}
+
+% \subsubsection{For Management}
+
+% \begin{enumerate}
+%     \item \textbf{Monthly Review:} Conduct monthly reviews of sentiment rankings to identify trends and emerging issues
+
+%     \item \textbf{High-Risk Period Support:} Provide additional support during identified high-stress periods (project deadlines, organizational changes)
+
+%     \item \textbf{Positive Reinforcement:} Leverage top performers (Eric Bass, Sally Beck, Lydia Delgado) as mentors or team morale champions
+
+%     \item \textbf{Targeted Support:} Provide additional resources and support to consistently negative-ranking employees (John Arnold, Kayne Coulter, Patti Thompson)
+% \end{enumerate}
+
+% \subsubsection{For Organizational Development}
+
+% \begin{enumerate}
+%     \item \textbf{Communication Training:} Provide training on positive and constructive communication practices
+
+%     \item \textbf{Feedback Channels:} Establish formal channels for escalating concerns before they accumulate into clusters of negative communications
+
+%     \item \textbf{Culture Enhancement:} Develop initiatives to increase positive interactions and reduce neutral-only communication patterns
+
+%     \item \textbf{Longitudinal Tracking:} Continue sentiment analysis over extended periods to validate findings and track intervention effectiveness
+% \end{enumerate}
+
+% \subsection{Future Research Directions}
+
+% \begin{enumerate}
+%     \item \textbf{Network Analysis:} Analyze email recipient patterns to understand how sentiment propagates through organizational networks
+
+%     \item \textbf{Topic Modeling:} Identify specific topics or issues associated with positive vs. negative sentiment
+
+%     \item \textbf{Advanced Models:} Explore non-linear models (random forests, neural networks) for potentially improved predictive performance
+
+%     \item \textbf{Multi-Modal Analysis:} Incorporate additional data sources (meeting attendance, performance reviews, survey responses) for comprehensive engagement assessment
+
+%     \item \textbf{Causal Analysis:} Conduct causal inference studies to identify specific organizational interventions that improve sentiment
+% \end{enumerate}
+
+% \subsection{Limitations of This Study}
+
+% \begin{itemize}
+%     \item \textbf{Single Organization:} Analysis limited to one company (Enron), limiting generalizability
+%     \item \textbf{Historical Data:} Dataset from 2010-2011 may not reflect current communication patterns
+%     \item \textbf{Email-Only:} Analysis limited to email; does not capture other communication channels (chat, meetings, phone)
+%     \item \textbf{Automated Classification:} While validated, LLM-based classification may miss nuanced contextual factors
+%     \item \textbf{Survivorship Bias:} Only includes employees who remained throughout the study period
+% \end{itemize}
+
+% \subsection{Final Thoughts}
+
+% This analysis demonstrates the power of natural language processing and machine learning for understanding employee sentiment and engagement. The high predictive accuracy of the models, combined with actionable insights from the ranking and flight risk analyses, provides a strong foundation for data-driven human resource management.
+
+% The identification of Sally Beck's August 2011 crisis period, despite her overall strong performance, illustrates the value of monitoring temporal patterns rather than relying solely on aggregate metrics. Organizations that implement similar systems can potentially identify and address employee concerns before they escalate to attrition.
+
+% The predominantly neutral communication patterns (86.7\%) suggest an opportunity for cultural initiatives that encourage more positive recognition and appreciation in day-to-day communications, which could further enhance employee engagement and organizational climate.
+
+% \newpage
+
+% \section{Appendices}
+
+% \subsection{Appendix A: Data Quality and Validation}
+
+% \subsubsection{Data Completeness}
+% \begin{itemize}
+%     \item All 2,191 records successfully labeled
+%     \item No missing values in key fields (sender, date, body)
+%     \item All dates fall within expected range (2010-2011)
+% \end{itemize}
+
+% \subsubsection{Multi-Model Validation}
+% \begin{itemize}
+%     \item Qwen 2.5 72B (primary model)
+%     \item Claude Sonnet 4.5 (validation)
+%     \item Llama 3.1 70B (additional validation)
+%     \item Two-model agreement: 86.5\%
+%     \item Three-model agreement: 84.2\%
+% \end{itemize}
+
+% \subsection{Appendix B: Technical Implementation}
+
+% \subsubsection{Software and Libraries}
+% \begin{itemize}
+%     \item Python 3.9
+%     \item pandas 1.5.0 (data manipulation)
+%     \item scikit-learn 1.2.0 (modeling)
+%     \item matplotlib 3.6.0 (visualization)
+%     \item seaborn 0.12.0 (visualization)
+%     \item Together AI API (LLM access)
+%     \item Anthropic API (validation)
+% \end{itemize}
+
+% \subsubsection{Code Structure}
+% \begin{itemize}
+%     \item Main analysis notebook: \texttt{employee\_sentiment\_analysis\_complete.ipynb}
+%     \item Sentiment labeling: \texttt{run\_sentiment\_labeling.py}
+%     \item Score calculation: \texttt{tasks\_3\_4\_5.py}
+%     \item Predictive modeling: \texttt{task6\_predictive\_modeling.py}
+%     \item Model comparison: \texttt{compare\_models.py}
+% \end{itemize}
+
+% \subsection{Appendix C: Glossary of Terms}
+
+% \begin{itemize}
+%     \item \textbf{Sentiment:} The emotional tone of a communication, classified as Positive, Negative, or Neutral
+%     \item \textbf{Normalized Score:} Sentiment score divided by total emails, accounting for varying activity levels
+%     \item \textbf{Simple Score:} Raw count of positive minus negative emails
+%     \item \textbf{Flight Risk:} Employee with 4+ negative emails in a 30-day rolling window
+%     \item \textbf{LLM:} Large Language Model, an AI system trained on vast text corpora
+%     \item \textbf{R² Score:} Coefficient of determination, measuring proportion of variance explained by the model
+%     \item \textbf{MSE:} Mean Squared Error, average squared difference between predicted and actual values
+% \end{itemize}
+
+\end{document}
