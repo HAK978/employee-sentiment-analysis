@@ -3,6 +3,7 @@
 ## Overview
 
 This project analyzes employee sentiment from 2,191 email messages collected from 10 employees at Enron Corporation during 2010-2011. The analysis uses large language model (LLM) based sentiment classification, statistical methods, and predictive modeling to identify engagement patterns, top performers, and flight risk employees.
+Primary model used for this task was Qwen 2.5 72B-Instruct. Supplementary analysis and cross-verification were performed using Claude 4.5 Sonnet and Llama 3.1 70B to ensure the robustness of the classification schema and engagement metrics.
 
 ---
 
