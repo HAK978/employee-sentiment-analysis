@@ -123,6 +123,6 @@ All visualizations are stored in the `visualizations/` folder:
 
 **Flight Risk Criteria**: 4+ negative emails within any 30-day rolling window (irrespective of month boundaries)
 
-**Predictive Modeling**: Linear regression model (R² = 1.0000) analyzing relationship between message characteristics and monthly sentiment
+**Predictive Modeling**: Linear regression model (R² = 0.0018) analyzing relationship between message characteristics and monthly sentiment
 
 
